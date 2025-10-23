@@ -1,3 +1,5 @@
+#include <vector>
+#include <random>
 #include "TicTacToe.h"
 #include "../Application.h"
 
@@ -54,12 +56,12 @@ Bit* TicTacToe::PieceForPlayer(const int playerNumber)
 //
 void TicTacToe::setUpBoard()
 {
-    // Tell engine it's a 2-player game on a 3×3 grid
+
     setNumberOfPlayers(2);
     _gameOptions.rowX = 3;
     _gameOptions.rowY = 3;
 
-    // Lay out 3×3 board squares (adjust origin/cell size if you like)
+    // lay out 3×3 board squares 
     const ImVec2 origin(100.0f, 100.0f);
     const float  cell = 128.0f;
 
@@ -68,9 +70,9 @@ void TicTacToe::setUpBoard()
             _grid[row][col].initHolder(
                 ImVec2(origin.x + col * cell, origin.y + row * cell),
                 "square.png",
-                col, row); // Square API needs column,row
+                col, row); 
 
-    // Start turn system
+    // start turn system
     startGame();
 }
 
@@ -80,22 +82,22 @@ void TicTacToe::setUpBoard()
 //
 bool TicTacToe::actionForEmptyHolder(BitHolder *holder)
 {
-    // Already over? Don’t allow more moves (extra safety).
+    // already over? don’t allow more moves
     if (checkForWinner() != nullptr || checkForDraw())
         return false;
 
     if (!holder) return false;
     if (holder->bit() != nullptr) return false; // must be empty
 
-    // Current player is zero-based (0 or 1)
+    // current player is zero-based (0 or 1)
     const int current = getCurrentPlayer()->playerNumber();
 
-    // Create and place the piece
-    Bit* piece = PieceForPlayer(current);        // DO NOT change PieceForPlayer()
+    // create and place the piece
+    Bit* piece = PieceForPlayer(current);        
     piece->setPosition(holder->getPosition());
     holder->setBit(piece);
 
-    // Tell the app to evaluate win/draw and “end the turn”
+    // evaluate win/draw and end the turn
     ClassGame::EndOfTurn();
 
     return true;
@@ -119,7 +121,7 @@ bool TicTacToe::canBitMoveFromTo(Bit* bit, BitHolder*src, BitHolder*dst)
 //
 void TicTacToe::stopGame()
 {
-    // Clear every square (engine cleans up the Bit)
+    //clear every square (engine cleans up the Bit)
     for (int y = 0; y < 3; ++y)
         for (int x = 0; x < 3; ++x)
             _grid[y][x].destroyBit();
@@ -140,7 +142,7 @@ Player* TicTacToe::ownerAt(int index) const
 
 Player* TicTacToe::checkForWinner()
 {
-    // All 8 winning triples (indices 0..8, row-major)
+    // 8 winning triples (indices 0..8, row-major)
     static const int W[8][3] = {
         {0,1,2},{3,4,5},{6,7,8},  // rows
         {0,3,6},{1,4,7},{2,5,8},  // cols
@@ -181,7 +183,7 @@ std::string TicTacToe::initialStateString()
 std::string TicTacToe::stateString() const
 {
     // 9 chars, left→right, top→bottom.
-    // '0' = empty; players are zero-based, so store ('1' or '2') as (owner+1).
+    // '0' = empty, players are zero-based, so store ('1' or '2') as (owner+1).
     std::string s;
     s.reserve(9);
     for (int i = 0; i < 9; ++i) {
@@ -203,19 +205,19 @@ std::string TicTacToe::stateString() const
 //
 void TicTacToe::setStateString(const std::string &s)
 {
-    // Clear existing bits
+    // clear existing bits
     for (int y = 0; y < 3; ++y)
         for (int x = 0; x < 3; ++x)
             _grid[y][x].destroyBit();
 
-    // Rebuild from the 9-char string
+    // rebuild from the 9-char string
     for (int i = 0; i < 9 && i < (int)s.size(); ++i) {
         char ch = s[i];
         int y = i / 3, x = i % 3;
         if (ch == '0') continue;
 
         int oneBased = ch - '0';   // 1 or 2
-        int zeroBased = oneBased - 1; // 0 or 1 (engine player index)
+        int zeroBased = oneBased - 1; // 0 or 1 
 
         Bit* piece = PieceForPlayer(zeroBased);
         piece->setPosition(_grid[y][x].getPosition());
