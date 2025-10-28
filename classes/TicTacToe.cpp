@@ -1,5 +1,7 @@
 #include <vector>
 #include <random>
+#include <limits>
+#include <algorithm>
 #include "TicTacToe.h"
 #include "../Application.h"
 
@@ -30,6 +32,68 @@
 const int AI_PLAYER   = 1;      // index of the AI player (O)
 const int HUMAN_PLAYER= 0;      // index of the human player (X)
 
+
+namespace {
+// board entries: -1 = empty, 0 = P1, 1 = P2
+static const int LINES[8][3] = {
+    {0,1,2},{3,4,5},{6,7,8},  // rows
+    {0,3,6},{1,4,7},{2,5,8},  // cols
+    {0,4,8},{2,4,6}           // diagonals
+};
+
+inline int winnerOn(const int b[9]) {
+    for (auto &t : LINES) {
+        int a=b[t[0]], c=b[t[1]], d=b[t[2]];
+        if (a!=-1 && a==c && c==d) return a;      // 0 or 1
+    }
+    return -1;
+}
+
+inline bool fullBoard(const int b[9]) {
+    for (int i=0;i<9;++i) if (b[i]==-1) return false;
+    return true;
+}
+
+// Negamax without alpha-beta (per assignment)
+int negamax(int b[9], int player, int depth) {
+    int w = winnerOn(b);
+    if (w != -1) {
+        // prefer faster wins / slower losses
+        return (w == player ?  (10 - depth) : -(10 - depth));
+    }
+    if (fullBoard(b)) return 0; // draw
+
+    int best = std::numeric_limits<int>::min();
+    int opp  = 1 - player;
+    for (int i=0;i<9;++i) {
+        if (b[i] == -1) {
+            b[i] = player;
+            int val = -negamax(b, opp, depth+1);
+            b[i] = -1;
+            if (val > best) best = val;
+        }
+    }
+    // If no moves somehow, it’s a draw
+    return (best == std::numeric_limits<int>::min()) ? 0 : best;
+}
+
+int bestMoveNegamax(int b[9], int player) {
+    int bestIdx = -1;
+    int bestVal = std::numeric_limits<int>::min();
+    int opp = 1 - player;
+
+    for (int i=0;i<9;++i) {
+        if (b[i] == -1) {
+            b[i] = player;
+            int val = -negamax(b, opp, 1);
+            b[i] = -1;
+            if (val > bestVal) { bestVal = val; bestIdx = i; }
+        }
+    }
+    return bestIdx; // -1 means no legal moves
+}
+} // namespace
+
 TicTacToe::TicTacToe()
 {
 }
@@ -58,6 +122,7 @@ void TicTacToe::setUpBoard()
 {
 
     setNumberOfPlayers(2);
+    getPlayerAt(1)->setAIPlayer(true);
     _gameOptions.rowX = 3;
     _gameOptions.rowY = 3;
 
@@ -232,6 +297,32 @@ void TicTacToe::setStateString(const std::string &s)
 //
 void TicTacToe::updateAI() 
 {
-    // we will implement the AI in the next assignment!
+    if (checkForWinner() != nullptr || checkForDraw())
+        return;
+
+    
+    if (getCurrentPlayer()->playerNumber() != 1)
+        return;
+
+    int b[9];
+    for (int i=0;i<9;++i) {
+        Player* p = ownerAt(i);
+        b[i] = p ? p->playerNumber() : -1; // 0 or 1, else -1
+    }
+
+    int best = bestMoveNegamax(b, /*player=*/1);
+    if (best < 0) {
+        return;
+    }
+
+    int row = best / 3, col = best % 3;
+    BitHolder &h = _grid[row][col];
+    if (h.bit() != nullptr) return; // safety guard
+
+    Bit* piece = PieceForPlayer(1);         
+    piece->setPosition(h.getPosition());
+    h.setBit(piece);
+
+    endTurn();
 }
 
